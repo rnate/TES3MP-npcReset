@@ -17,6 +17,7 @@ under: local previousCellDescription = Players[pid].data.location.cell ~line 270
 
 local jsonInterface = require("jsonInterface")
 local resetMinutes = 60 --default of 60 minutes
+--local whiteList = {"-2, -9", "Seyda Neen, Foryn Gilnith's Shack"} --remove the two dashes on the far left to uncomment this list. These will be the only cells that can be added to the reset list if you do this
 
 local function SaveJSON(resetData)
 	jsonInterface.save("npcReset.json", resetData)
@@ -41,25 +42,40 @@ function npcReset.OnPlayerConnect() --create the file if necessary
 end
 
 function npcReset.OnPlayerCellChange(pid)
+	local whiteListCheck = true
+	
 	cell = tes3mp.GetCell(pid)
 	
-	LoadJSON()
-
-	if resetData == nil then
-		resetData = {}
-	end
-
-	local timeMinutes = os.date("!%I") * 60 + os.date("!%M") --returns the UTC time minutes since midnight
-	
-	if resetData[cell] == nil then
-		resetData[cell] = {}
-		resetData[cell]['minutes'] = timeMinutes
-		SaveJSON(resetData)
-	elseif timeMinutes - resetData[cell]['minutes'] >= resetMinutes then
-		resetData[cell]['minutes'] = timeMinutes
-		logicHandler.RunConsoleCommandOnPlayer(pid, "RA")
+	if whiteList ~= nil then
+		whiteListCheck = false
 		
-		SaveJSON(resetData)
+		for _, value in pairs(whiteList) do
+			if value == cell then
+				whiteListCheck = true
+				break
+			end
+		end
+	end
+	
+	if whiteListCheck then
+		LoadJSON()
+		
+		if resetData == nil then
+			resetData = {}
+		end
+		
+		local timeMinutes = os.date("!%I") * 60 + os.date("!%M") --returns the UTC time minutes since midnight
+		
+		if resetData[cell] == nil then
+			resetData[cell] = {}
+			resetData[cell]['minutes'] = timeMinutes
+			SaveJSON(resetData)
+		elseif timeMinutes - resetData[cell]['minutes'] >= resetMinutes then
+			resetData[cell]['minutes'] = timeMinutes
+			logicHandler.RunConsoleCommandOnPlayer(pid, "RA")
+			
+			SaveJSON(resetData)
+		end
 	end
 end
 
