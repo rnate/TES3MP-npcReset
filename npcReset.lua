@@ -1,51 +1,46 @@
---[[NPC Reset 1.0 - Developed with tes3mp 0.7.0-alpha
+--[[NPC Reset 1.1 - Developed with tes3mp 0.7.0-alpha
 This script will log the time the player enters a cell, and then depending on the resetTime, run the console command 'RA'
 
 Installation
 Save this file as npcReset.lua in the mp-stuff\scripts\ directory.
-These edits will be made in the same directory in the eventHandler.lua file.
+These edits will be made in the same directory in the serverCore.lua file.
 
 1) Add: npcReset = require("npcReset")
-under: commandHandler = require("commandHandler") ~line 3
+under: menuHelper = require("menuHelper") ~line 13
 
-2) Add: npcReset.OnPlayerConnect()
-under: tes3mp.StartTimer(Players[pid].loginTimerId) ~line 49
+2) Add: npcReset.OnServerPostInit()
+under: ResetAdminCounter() ~line 284
 
-3) Add: npcReset.OnPlayerCellChange(pid)
-under: local previousCellDescription = Players[pid].data.location.cell ~line 270
+3) Add: npcReset.OnCellLoad(pid, cellDescription)
+under: eventHandler.OnCellLoad(pid, cellDescription) ~line 457
 -------------------------------------------------------------------------]]
 
 local jsonInterface = require("jsonInterface")
 local resetMinutes = 60 --default of 60 minutes
+local resetData = nil
 --local whiteList = {"-2, -9", "Seyda Neen, Foryn Gilnith's Shack"} --remove the two dashes on the far left to uncomment this list. These will be the only cells that can be added to the reset list if you do this
 
 local function SaveJSON(resetData)
 	jsonInterface.save("npcReset.json", resetData)
 end
 
-local function LoadJSON()
-	resetData = jsonInterface.load("npcReset.json")
-end
-
 local npcReset = {}
 
-function npcReset.OnPlayerConnect() --create the file if necessary
+function npcReset.OnServerPostInit() --create the file if necessary
 	local jsonFile = io.open(os.getenv("MOD_DIR") .. "/npcReset.json", "r")
 	io.close()
 	
 	if jsonFile ~= nil then
-		LoadJSON()
+		resetData = jsonInterface.load("npcReset.json")
 	else
-		local resetData = {}
+		resetData = {}
 		SaveJSON(resetData)
 	end
 end
 
-function npcReset.OnPlayerCellChange(pid)
+function npcReset.OnCellLoad(pid, cell)
 	local whiteListCheck = true
-	
-	cell = tes3mp.GetCell(pid)
-	
+
 	if whiteList ~= nil then
 		whiteListCheck = false
 		
@@ -58,17 +53,16 @@ function npcReset.OnPlayerCellChange(pid)
 	end
 	
 	if whiteListCheck then
-		LoadJSON()
-		
 		if resetData == nil then
 			resetData = {}
 		end
 		
-		local timeMinutes = os.date("!%I") * 60 + os.date("!%M") --returns the UTC time minutes since midnight
+		local timeMinutes = os.date("%I") * 60 + os.date("%M") --returns server time minutes since midnight
 		
 		if resetData[cell] == nil then
 			resetData[cell] = {}
 			resetData[cell]['minutes'] = timeMinutes
+			
 			SaveJSON(resetData)
 		elseif timeMinutes - resetData[cell]['minutes'] >= resetMinutes then
 			resetData[cell]['minutes'] = timeMinutes
