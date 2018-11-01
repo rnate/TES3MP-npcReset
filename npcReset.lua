@@ -1,4 +1,4 @@
---[[NPC Reset 1.1 - Developed with tes3mp 0.7.0-alpha
+--[[NPC Reset 1.11 - Developed with tes3mp 0.7.0-alpha
 This script will log the time the player enters a cell, and then depending on the resetTime, run the console command 'RA'
 
 Installation
@@ -22,6 +22,14 @@ local resetData = nil
 
 local function SaveJSON(resetData)
 	jsonInterface.save("npcReset.json", resetData)
+end
+
+local function RunRA(cell, timeMinutes, pid)
+	resetData[cell]['minutes'] = timeMinutes
+
+	logicHandler.RunConsoleCommandOnPlayer(pid, "RA")
+	
+	SaveJSON(resetData)
 end
 
 local npcReset = {}
@@ -53,22 +61,15 @@ function npcReset.OnCellLoad(pid, cell)
 	end
 	
 	if whiteListCheck then
-		if resetData == nil then
-			resetData = {}
-		end
-		
-		local timeMinutes = os.date("%I") * 60 + os.date("%M") --returns server time minutes since midnight
-		
+		--save the entire date in minutes to avoid issues where the hour/day/month time rolls over to 0
+		local timeMinutes = os.time{month = os.date("%m"), year = os.date("%Y"), day = os.date("%d"), hour = os.date("%H"), min = os.date("%M")} / 60
+
 		if resetData[cell] == nil then
 			resetData[cell] = {}
-			resetData[cell]['minutes'] = timeMinutes
 			
-			SaveJSON(resetData)
+			RunRA(cell, timeMinutes, pid)
 		elseif timeMinutes - resetData[cell]['minutes'] >= resetMinutes then
-			resetData[cell]['minutes'] = timeMinutes
-			logicHandler.RunConsoleCommandOnPlayer(pid, "RA")
-			
-			SaveJSON(resetData)
+			RunRA(cell, timeMinutes, pid)
 		end
 	end
 end
