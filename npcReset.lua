@@ -35,7 +35,7 @@ end
 local npcReset = {}
 
 function npcReset.OnServerPostInit() --create the file if necessary
-	local jsonFile = io.open(os.getenv("MOD_DIR") .. "/npcReset.json", "r")
+	local jsonFile = io.open(tes3mp.GetModDir() .. "/npcReset.json", "r")
 	io.close()
 	
 	if jsonFile ~= nil then
